@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1015">
+<title>Motion Lifetime</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.js"></script>
+<style>
+:root{--bg:#f4f5f8;--panel:#fff;--text:#14161c;--muted:#6a7080;--line:#dfe2ea;--accent:#4f5bf0;--accent-t:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1015;--panel:#171a22;--text:#eef0f6;--muted:#9097a8;--line:#272b36;--accent:#7c86ff;--accent-t:#0e1015}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.4;
+ padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) calc(20px + env(safe-area-inset-bottom,0px)) env(safe-area-inset-left,0px)}
+.app{max-width:560px;margin:0 auto;padding:0 14px}
+h1{font:400 clamp(30px,10vw,46px)/1.15 Pacifico,"Segoe Script","Brush Script MT",cursive;margin:0;padding:12px 0 8px;text-align:center;white-space:nowrap}
+h1 .l{display:inline-block;transform-origin:50% 80%;animation:bob 1.8s ease-in-out infinite,col 6s linear infinite;animation-delay:calc(var(--i)*-.13s),calc(var(--i)*-.4s);text-shadow:0 0 14px currentColor}
+h1 .sp{width:.3em}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-4deg) scale(1)}25%{transform:translateY(-.16em) rotate(0) scale(1.12)}50%{transform:translateY(0) rotate(4deg) scale(1)}75%{transform:translateY(.06em) rotate(0) scale(.94)}}
+@keyframes col{0%,100%{color:#ff5a5f}20%{color:#ffc233}40%{color:#3ddc97}60%{color:#38bdf8}80%{color:#c77dff}}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:10px}
+.seg button{border:0;background:none;color:var(--muted);font:600 14px inherit;font-family:inherit;padding:10px 0;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.seg button i{display:inline-block;border:2px solid currentColor;border-radius:3px}
+.seg button[data-r="16:9"] i{width:20px;height:12px}.seg button[data-r="9:16"] i{width:12px;height:20px}
+.seg button.on{background:var(--accent);color:var(--accent-t)}
+.top{position:sticky;top:0;z-index:5;background:var(--bg);padding-bottom:10px}
+.stage{background:#000;border-radius:14px;display:flex;justify-content:center;overflow:hidden}
+canvas#pv{display:block;max-width:100%;max-height:36vh}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tabs button{border:0;background:none;color:var(--muted);font:600 13px inherit;font-family:inherit;padding:9px 0;border-radius:9px;cursor:pointer}
+.tabs button.on{background:var(--accent);color:var(--accent-t)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:4px}
+.sec{display:none;gap:14px}.sec.on{display:grid}
+label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600}
+select,input[type=text]{width:100%;padding:11px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:16px}
+input[type=range]{width:100%;height:28px}
+input[type=color]{width:100%;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:3px}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pal{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.pal button{height:34px;border-radius:9px;border:2px solid transparent;cursor:pointer;padding:0}.pal button.on{border-color:var(--text)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip input{display:none}.chip[hidden]{display:none}
+.chip span{display:inline-block;padding:8px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;cursor:pointer;background:var(--bg)}
+.chip input:checked+span{background:var(--accent);color:var(--accent-t);border-color:var(--accent)}
+.btn{padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-weight:600;font-size:15px;cursor:pointer;font-family:inherit}
+.btn.s{padding:9px 10px;font-size:13px}.btn.p{background:var(--accent);color:var(--accent-t);border-color:var(--accent)}.btn:disabled{opacity:.5}
+.bar{height:6px;background:var(--line);border-radius:4px;overflow:hidden;display:none}.bar i{display:block;height:100%;width:0;background:var(--accent)}
+#st{font-size:13px;color:var(--muted)}#st:empty{display:none}
+@media(min-width:900px){.app{max-width:1000px;display:grid;grid-template-columns:minmax(0,1fr) 400px;column-gap:20px;align-items:start}
+ h1{grid-column:1/-1}.top{top:0}canvas#pv{max-height:62vh}}
+</style>
+</head>
+<body>
+<div class="app">
+<h1 id="logo" aria-label="Motion Lifetime">Motion Lifetime</h1>
+<div class="top">
+<div class="seg" id="seg"><button data-r="16:9"><i></i>Landscape 16:9</button><button data-r="9:16" class="on"><i></i>Portrait 9:16</button></div>
+<div class="stage"><canvas id="pv" width="960" height="540"></canvas></div>
+<div class="tabs" id="tabs"><button class="on" data-t="t1">Tema</button><button data-t="t2">Latar</button><button data-t="t3">Gerak</button><button data-t="t4">Teks</button><button data-t="t5">Ekspor</button></div>
+</div>
+<div class="panel">
+<section class="sec on" id="t1">
+<div><label>PRESET</label><select id="pre"></select></div>
+<div><label>KATEGORI</label><select id="cat"></select></div>
+<div class="chips" id="chips"></div>
+<div class="r2"><button class="btn s" id="all">Pilih semua</button><button class="btn s" id="none">Kosongkan</button></div>
+</section>
+<section class="sec" id="t2">
+<div><label>GAYA LATAR</label><select id="bg">
+<option value="gradasi">Gradasi Bergerak</option><option value="waves">Gelombang</option><option value="papan">Papan Tulis</option><option value="buku">Buku Tulis</option><option value="grid">Kertas Grafik (Kotak)</option><option value="bokeh">Bokeh</option><option value="langit">Langit & Awan</option><option value="malam">Malam Berbintang</option><option value="laut">Laut</option><option value="kota">Kota (Skyline)</option><option value="aurora">Aurora</option><option value="hexagon">Hexagon</option><option value="sunburst">Sunburst</option><option value="garis">Garis Neon</option><option value="blobs">Blob Cair</option><option value="rings">Lingkaran Berdenyut</option><option value="dots">Titik Bergelombang</option><option value="solid">Warna Polos</option></select></div>
+<div><label>PALET WARNA</label><div class="pal" id="pal"></div></div>
+</section>
+<section class="sec" id="t3">
+<div class="r2"><div><label>POLA GERAK</label><select id="mode">
+<option value="float">Melayang</option><option value="fall">Jatuh</option><option value="rise">Naik</option><option value="orbit">Mengorbit</option><option value="bounce">Memantul</option><option value="pulse">Berdenyut</option><option value="marquee">Geser</option><option value="wave">Gelombang</option><option value="spiral">Spiral</option></select></div>
+<div><label>ROTASI</label><select id="rot"><option value="none">Tanpa</option><option value="sway">Goyang</option><option value="spin">Berputar</option></select></div></div>
+<div><label>JUMLAH OBJEK</label><input type="range" id="cnt" min="3" max="60" value="18"></div>
+<div><label>UKURAN OBJEK</label><input type="range" id="siz" min="5" max="30" value="12"></div>
+<div><label>KECEPATAN</label><input type="range" id="spd" min="1" max="4" step="1" value="1"></div>
+<div class="r2"><div><label>VARIASI</label><input type="range" id="seed" min="1" max="99" value="7"></div><button class="btn s" id="dice" style="align-self:end">🎲 Acak</button></div>
+</section>
+<section class="sec" id="t4">
+<div><label>JUDUL</label><input type="text" id="ttl"></div>
+<div><label>SUBJUDUL</label><input type="text" id="sub"></div>
+<div class="r2"><div><label>FONT</label><select id="fnt"><option value="sans">Sans Tebal</option><option value="serif">Serif</option><option value="hand">Tulisan Tangan</option><option value="round">Bulat</option></select></div>
+<div><label>ANIMASI</label><select id="tan"><option value="none">Diam</option><option value="breathe">Berdenyut</option><option value="float">Melayang</option><option value="wiggle">Goyang</option><option value="wave">Gelombang huruf</option></select></div></div>
+<div class="r2"><div><label>POSISI</label><select id="tps"><option value="top">Atas</option><option value="mid">Tengah</option><option value="bot">Bawah</option></select></div>
+<div><label>LATAR TEKS</label><select id="tpn"><option value="none">Tanpa</option><option value="white">Kartu putih</option><option value="dark">Kartu gelap</option></select></div></div>
+<div class="r2"><div><label>UKURAN</label><input type="range" id="tsz" min="4" max="20" value="11"></div><div><label>WARNA</label><input type="color" id="tcl" value="#ffffff"></div></div>
+</section>
+<section class="sec" id="t5">
+<div class="r2" style="grid-template-columns:1fr"><input type="hidden" id="rat" value="9:16">
+<div><label>KUALITAS</label><select id="qlt"><option value="1280">HD 720p</option><option value="1920" selected>Full HD 1080p</option><option value="3840">4K UHD</option></select></div></div>
+<div class="r2"><div><label>DURASI</label><select id="dur"><option value="5">5 detik</option><option value="8" selected>8 detik</option><option value="10">10 detik</option><option value="15">15 detik</option><option value="20">20 detik</option></select></div>
+<div><label>FPS</label><select id="fps"><option>24</option><option selected>30</option><option>60</option></select></div></div>
+<button class="btn p" id="vid">Ekspor Video</button><button class="btn" id="png">Simpan Frame PNG</button><button class="btn s" id="cancel" style="display:none">Batalkan ekspor</button>
+<div class="bar" id="bar"><i></i></div><div id="st"></div>
+</section>
+</div>
+</div>
+<script>
+const TAU=Math.PI*2,$=id=>document.getElementById(id);
+const PALS=[["#14246b","#2f5fd0","#ffc233","#ff5a5f","#3ddc97"],["#fdf2f8","#dbeafe","#fb7185","#60a5fa","#fbbf24"],
+["#0b1030","#3a1c71","#d76d77","#ffaf7b","#ffe29f"],["#021b2b","#0a4d68","#088395","#05bfdb","#9ef0ff"],["#12071f","#5b2a86","#7209b7","#f72585","#ff9ec7"],
+["#08130d","#0f5132","#1b9c5e","#7bd389","#e3f9c6"],["#fff7ec","#ffd6a5","#ff9f68","#ff5e5b","#7a2e8e"],["#0f0f14","#2b2d42","#8d99ae","#edf2f4","#ef233c"],
+["#10002b","#240046","#5a189a","#9d4edd","#e0aaff"],["#1a1423","#372549","#774c60","#b75d69","#eacdc2"]];
+let pal=0,curT=0;
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function rgba(h,a){const n=parseInt(h.slice(1),16);return`rgba(${n>>16},${n>>8&255},${n&255},${a})`}
+const D="#1b1d2a",W="#fff";
+const R=(c,f,x,y,w,h,r=0)=>{c.fillStyle=f;c.beginPath();c.roundRect(x,y,w,h,r);c.fill()};
+const Ci=(c,f,x,y,r)=>{c.fillStyle=f;c.beginPath();c.arc(x,y,r,0,TAU);c.fill()};
+const Pg=(c,f,p)=>{c.fillStyle=f;c.beginPath();p.forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]));c.closePath();c.fill()};
+const Ln=(c,s,w,a,b)=>{c.strokeStyle=s;c.lineWidth=w;c.beginPath();c.moveTo(a[0],a[1]);c.lineTo(b[0],b[1]);c.stroke()};
+const Tx=(c,s,f,z)=>{c.save();c.scale(.01,.01);c.fillStyle=f;c.font=`800 ${z*100}px system-ui,sans-serif`;c.textAlign="center";c.textBaseline="middle";c.fillText(s,0,z*5);c.restore()};
+
+// ===== Pustaka objek vektor sekolah (koordinat -1..1) =====
+const IC={
+buku:["📚","Buku",(c,P)=>{R(c,P[2],-.7,-.9,1.4,1.8,.1);R(c,"rgba(0,0,0,.2)",-.7,-.9,.25,1.8,.1);R(c,W,-.45,.62,1.15,.2,.05);R(c,P[4],-.2,-.6,.7,.7,.08);R(c,W,-.05,-.4,.4,.1);R(c,W,-.05,-.2,.4,.1)}],
+pensil:["✏️","Pensil",(c,P)=>{c.rotate(.785);R(c,P[3],-.2,-.9,.4,1.4);R(c,"#f7a1b5",-.2,-1.15,.4,.27,.07);R(c,"#c9ced8",-.2,-.9,.4,.14);Pg(c,"#f4d6aa",[[-.2,.5],[.2,.5],[0,1.05]]);Pg(c,D,[[-.07,.86],[.07,.86],[0,1.05]]);R(c,"rgba(255,255,255,.25)",-.1,-.75,.08,1.2)}],
+penggaris:["📏","Penggaris",(c,P)=>{R(c,P[4],-1,-.3,2,.6,.08);for(let i=0;i<11;i++)R(c,"rgba(0,0,0,.5)",-.85+i*.17,-.3,.035,i%2?.18:.3)}],
+topi:["🎓","Topi Wisuda",(c,P)=>{Pg(c,"#2f3556",[[-.55,0],[-.55,.45],[0,.72],[.55,.45],[.55,0],[0,.25]]);Pg(c,D,[[0,-.65],[1,-.2],[0,.25],[-1,-.2]]);Ln(c,P[3],.06,[.82,-.16],[.82,.45]);Ci(c,P[3],.82,.5,.1)}],
+gedung:["🏫","Gedung Sekolah",(c,P)=>{R(c,"rgba(0,0,0,.15)",-1,.7,2,.1,.04);R(c,P[2],-.8,-.2,1.6,.9);Pg(c,P[3],[[-.95,-.2],[0,-.8],[.95,-.2]]);R(c,P[4],-.15,.2,.3,.5,.05);R(c,W,-.6,0,.28,.28,.03);R(c,W,.32,0,.28,.28,.03);Ln(c,D,.04,[0,-.8],[0,-1.05]);Pg(c,P[4],[[0,-1.05],[.32,-.97],[0,-.89]])}],
+globe:["🌍","Globe",(c,P)=>{Ci(c,P[3],0,-.05,.72);Pg(c,P[2],[[-.4,-.45],[-.1,-.6],[.05,-.35],[-.2,-.15],[-.45,-.2]]);Pg(c,P[2],[[.15,.05],[.5,-.05],[.55,.25],[.3,.5],[.1,.35]]);c.strokeStyle="rgba(255,255,255,.55)";c.lineWidth=.04;c.beginPath();c.ellipse(0,-.05,.3,.72,0,0,TAU);c.moveTo(-.72,-.05);c.lineTo(.72,-.05);c.stroke();c.strokeStyle=D;c.lineWidth=.07;c.beginPath();c.arc(0,-.05,.9,.15,2.6);c.stroke();R(c,D,-.4,.85,.8,.13,.05)}],
+atom:["⚛️","Atom",(c,P)=>{c.lineWidth=.08;c.strokeStyle=P[3];[0,1.047,2.094].forEach(a=>{c.beginPath();c.ellipse(0,0,.95,.36,a,0,TAU);c.stroke()});Ci(c,P[2],0,0,.2);Ci(c,P[4],.9,0,.09);Ci(c,P[4],-.45,.78,.09);Ci(c,P[4],-.45,-.78,.09)}],
+bel:["🔔","Lonceng",(c,P)=>{c.fillStyle=P[4];c.beginPath();c.moveTo(-.85,.5);c.quadraticCurveTo(-.6,.4,-.55,-.1);c.bezierCurveTo(-.5,-.75,.5,-.75,.55,-.1);c.quadraticCurveTo(.6,.4,.85,.5);c.closePath();c.fill();Ci(c,P[3],0,.68,.17);Ci(c,P[4],0,-.72,.1)}],
+jam:["🕒","Jam",(c,P)=>{Ci(c,P[3],0,0,.92);Ci(c,W,0,0,.74);for(let i=0;i<12;i++){const a=i*TAU/12;Ln(c,D,.05,[.6*Math.sin(a),-.6*Math.cos(a)],[.68*Math.sin(a),-.68*Math.cos(a)])}const h=TAU*curT,m=TAU*curT*4;Ln(c,D,.08,[0,0],[.4*Math.sin(h),-.4*Math.cos(h)]);Ln(c,P[2],.06,[0,0],[.58*Math.sin(m),-.58*Math.cos(m)]);Ci(c,D,0,0,.07)}],
+tas:["🎒","Tas",(c,P)=>{c.strokeStyle=P[3];c.lineWidth=.14;c.beginPath();c.arc(0,-.6,.38,Math.PI,0);c.stroke();R(c,P[2],-.7,-.6,1.4,1.5,.3);R(c,P[3],-.7,-.6,1.4,.6,.3);R(c,P[4],-.42,.2,.84,.5,.14);R(c,W,-.07,-.12,.14,.2,.04)}],
+apel:["🍎","Apel",(c,P)=>{Ci(c,P[2],-.3,.1,.62);Ci(c,P[2],.3,.1,.62);Ln(c,D,.09,[0,-.35],[.12,-.8]);c.fillStyle=P[4];c.beginPath();c.ellipse(.4,-.62,.3,.13,-.45,0,TAU);c.fill();Ci(c,"rgba(255,255,255,.3)",-.5,-.05,.12)}],
+bintang:["⭐","Bintang",(c,P)=>{Pg(c,P[4],[...Array(10)].map((_,i)=>{const r=i%2?.42:1,a=-Math.PI/2+i*Math.PI/5;return[r*Math.cos(a),r*Math.sin(a)]}))}],
+bulb:["💡","Lampu Ide",(c,P)=>{for(let i=0;i<5;i++){const a=-2.6+i*.55;Ln(c,P[4],.07,[1*Math.cos(a),-.2+Math.sin(a)],[.82*Math.cos(a),-.2+.82*Math.sin(a)])}Ci(c,P[4],0,-.2,.58);R(c,"#c9ced8",-.25,.3,.5,.28,.06);R(c,"#9aa1b3",-.18,.6,.36,.12,.05);Ln(c,"rgba(255,255,255,.7)",.05,[-.15,-.1],[0,.25])}],
+calc:["🧮","Kalkulator",(c,P)=>{R(c,D,-.6,-.9,1.2,1.8,.15);R(c,"#cfe9d6",-.45,-.75,.9,.4,.06);for(let r=0;r<4;r++)for(let q=0;q<3;q++)R(c,q==2&&r==3?P[2]:r==0?P[3]:"#8890a6",-.45+q*.32,-.2+r*.28,.26,.2,.05)}],
+aplus:["🅰️","Nilai A+",(c,P)=>{Ci(c,P[2],0,0,.92);Tx(c,"A+",W,.7)}],
+pi:["🔢","Rumus π",(c,P)=>{Ci(c,P[3],0,0,.92);Tx(c,"π",W,1.1)}]
+};
+
+// ===== Pustaka tema (DSL vektor) =====
+let OC="#fff";
+const pr=a=>{const r=[];for(let i=0;i<a.length;i+=2)r.push([a[i],a[i+1]]);return r};
+function dsl(c,P,ops){const m={a:P[2],b:P[3],c:P[4],d:D,w:W,x:OC},f=v=>m[v]||v;
+ for(const o of ops){const t=o[0];
+  if(t=="c")Ci(c,f(o[1]),o[2],o[3],o[4]);
+  else if(t=="r")R(c,f(o[1]),o[2],o[3],o[4],o[5],o[6]||0);
+  else if(t=="p")Pg(c,f(o[1]),pr(o[2]));
+  else if(t=="l")Ln(c,f(o[1]),o[2],[o[3],o[4]],[o[5],o[6]]);
+  else if(t=="e"){c.fillStyle=f(o[1]);c.beginPath();c.ellipse(o[2],o[3],o[4],o[5],o[6]||0,0,TAU);c.fill()}
+  else if(t=="o"){c.fillStyle=f(o[1]);c.beginPath();c.arc(o[2],o[3],o[4],0,TAU);c.arc(o[2],o[3],o[5],0,TAU,true);c.fill("evenodd")}
+  else if(t=="d"){c.fillStyle=f(o[1]);c.beginPath();c.arc(o[2],o[3],o[4],0,Math.PI);c.fill()}
+  else if(t=="a"){c.strokeStyle=f(o[1]);c.lineWidth=o[2];c.beginPath();c.arc(o[3],o[4],o[5],o[6],o[7]);c.stroke()}
+  else if(t=="s"){const p=pr(o[2]),n=p.length,md=(u,q)=>[(u[0]+q[0])/2,(u[1]+q[1])/2];c.fillStyle=f(o[1]);c.beginPath();const s=md(p[n-1],p[0]);c.moveTo(s[0],s[1]);for(let i=0;i<n;i++){const q=p[i],e=md(q,p[(i+1)%n]);c.quadraticCurveTo(q[0],q[1],e[0],e[1])}c.closePath();c.fill()}
+  else if(t=="g"){c.fillStyle=f(o[1]);for(let j=0;j<o[9];j++)for(let i=0;i<o[8];i++)c.fillRect(o[2]+i*o[6],o[3]+j*o[7],o[4],o[5])}
+  else if(t=="v"){for(let i=0;i<o[3];i++){const q=i*TAU/o[3];Ln(c,f(o[1]),o[2],[o[4]*Math.cos(q),o[4]*Math.sin(q)],[o[5]*Math.cos(q),o[5]*Math.sin(q)])}}
+  else if(t=="t"){c.save();c.translate(o[4]||0,o[5]||0);Tx(c,o[1],f(o[2]),o[3]);c.restore()}
+  else if(t=="x")c.rotate(o[1]);
+  else if(t=="xt")c.rotate(TAU*curT*o[1]);
+  else if(t=="u"){c.save();c.beginPath();c.arc(o[2],o[3],o[4],0,TAU);c.clip();c.fillStyle=f(o[1]);c.beginPath();c.rect(-3,-3,6,6);c.arc(o[5],o[6],o[7],0,TAU);c.fill("evenodd");c.restore()}
+ }}
+const NI={
+kucing:["🐱","Kucing",[["p","a",[-.68,-.1,-.72,-.9,-.12,-.5]],["p","a",[.68,-.1,.72,-.9,.12,-.5]],["c","a",0,.15,.72],["p","c",[-.56,-.3,-.58,-.68,-.3,-.47]],["p","c",[.56,-.3,.58,-.68,.3,-.47]],["c","d",-.26,.05,.08],["c","d",.26,.05,.08],["p","b",[-.08,.2,.08,.2,0,.3]],["l","d",.03,-.98,.18,-.5,.26],["l","d",.03,-.98,.42,-.5,.34],["l","d",.03,.98,.18,.5,.26],["l","d",.03,.98,.42,.5,.34]]],
+anjing:["🐶","Anjing",[["e","b",-.68,-.05,.26,.55,.25],["e","b",.68,-.05,.26,.55,-.25],["e","a",0,.1,.62,.68],["e","w",0,.35,.36,.28],["c","d",-.25,0,.08],["c","d",.25,0,.08],["e","d",0,.22,.13,.09],["r","#ff8fa3",-.09,.45,.18,.28,.09]]],
+ikan:["🐟","Ikan",[["p","b",[.5,0,1,-.4,1,.4]],["e","a",-.1,0,.7,.45],["p","b",[-.2,-.4,.1,-.8,.25,-.38]],["c","w",-.45,-.1,.1],["c","d",-.47,-.1,.05],["l","c",.07,.05,-.35,.05,.35]]],
+burung:["🐦","Burung",[["p","b",[-.5,.05,-1,-.1,-.6,.35]],["l","d",.05,0,.55,0,.9],["l","d",.05,.2,.55,.2,.9],["e","a",0,.1,.6,.5],["c","a",.45,-.35,.35],["p","c",[.75,-.4,1,-.3,.75,-.25]],["e","b",-.1,.15,.35,.22,-.5],["c","d",.52,-.42,.06]]],
+kupu:["🦋","Kupu-kupu",[["e","a",-.45,-.25,.45,.38,.5],["e","a",.45,-.25,.45,.38,-.5],["e","b",-.35,.35,.3,.28,-.4],["e","b",.35,.35,.3,.28,.4],["c","c",-.5,-.25,.12],["c","c",.5,-.25,.12],["r","d",-.07,-.55,.14,1.2,.07],["l","d",.03,0,-.55,-.3,-.9],["l","d",.03,0,-.55,.3,-.9]]],
+kelinci:["🐰","Kelinci",[["e","a",-.26,-.55,.15,.5],["e","a",.26,-.55,.15,.5],["e","#ffc0cb",-.26,-.55,.07,.36],["e","#ffc0cb",.26,-.55,.07,.36],["c","a",0,.25,.58],["c","d",-.22,.15,.07],["c","d",.22,.15,.07],["c","#ffc0cb",0,.3,.07],["l","d",.03,0,.35,0,.5]]],
+penguin:["🐧","Penguin",[["e","b",-.64,.1,.14,.45,.2],["e","b",.64,.1,.14,.45,-.2],["e","d",0,.05,.6,.85],["e","w",0,.2,.4,.6],["p","#ffb347",[-.12,-.38,.12,-.38,0,-.2]],["c","w",-.2,-.5,.1],["c","w",.2,-.5,.1],["c","d",-.2,-.5,.04],["c","d",.2,-.5,.04],["e","#ffb347",-.25,.92,.2,.08],["e","#ffb347",.25,.92,.2,.08]]],
+lebah:["🐝","Lebah",[["e","#cfe8ff",-.15,-.45,.22,.3,-.5],["e","#cfe8ff",.2,-.45,.22,.3,.5],["e","c",0,.1,.65,.45],["e","d",-.15,.1,.1,.42],["e","d",.2,.1,.1,.42],["c","d",-.5,0,.07],["l","d",.03,-.55,-.1,-.7,-.4],["p","d",[.62,.1,.92,.1,.62,.2]]]],
+paus:["🐋","Paus",[["p","a",[.6,.1,1,-.4,.95,.35,.7,.35]],["e","a",-.1,.15,.8,.5],["e","w",-.2,.4,.55,.15],["c","w",-.55,0,.08],["c","d",-.56,0,.04],["l","b",.07,-.25,-.3,-.25,-.75],["l","b",.07,-.25,-.75,-.45,-.9],["l","b",.07,-.25,-.75,-.05,-.9]]],
+rumah:["🏠","Rumah",[["r","d",.4,-.75,.16,.4],["r","a",-.65,-.1,1.3,.9],["p","b",[-.85,-.1,0,-.8,.85,-.1]],["r","c",-.15,.3,.3,.5],["r","w",-.5,.05,.25,.25],["r","w",.25,.05,.25,.25]]],
+apartemen:["🏢","Gedung Tinggi",[["r","a",-.45,-.95,.9,1.9,.05],["g","w",-.3,-.8,.18,.2,.26,.34,3,4],["r","b",-.12,.6,.24,.35]]],
+kastil:["🏰","Kastil",[["r","a",-.85,-.35,.45,1.2],["r","a",.4,-.35,.45,1.2],["r","a",-.4,-.1,.8,.95],["g","a",-.85,-.55,.12,.2,.165,0,3,1],["g","a",.4,-.55,.12,.2,.165,0,3,1],["g","a",-.4,-.3,.12,.2,.2,0,4,1],["r","d",-.15,.35,.3,.6,.15],["r","c",-.68,0,.1,.2],["r","c",.58,0,.1,.2],["l","d",.03,.62,-.55,.62,-.9],["p","b",[.62,-.9,.92,-.82,.62,-.74]]]],
+toko:["🏪","Toko",[["r","a",-.8,-.2,1.6,1],["g","b",-.85,-.5,.34,.3,.68,0,3,1],["g","w",-.51,-.5,.34,.3,.68,0,2,1],["r","d",-.15,.2,.3,.6],["r","w",-.65,.1,.4,.4],["r","w",.25,.1,.4,.4]]],
+mercusuar:["🗼","Mercusuar",[["p","w",[-.3,.9,.3,.9,.2,-.5,-.2,-.5]],["p","b",[-.28,.55,.28,.55,.25,.25,-.25,.25]],["p","b",[-.23,-.05,.23,-.05,.2,-.35,-.2,-.35]],["r","c",-.18,-.75,.36,.28],["p","b",[-.28,-.75,.28,-.75,0,-1]],["p","rgba(255,230,120,.5)",[.2,-.62,.98,-.9,.98,-.35]],["r","d",-.5,.9,1,.1,.03]]],
+pabrik:["🏭","Pabrik",[["r","d",.4,-.8,.2,.9],["r","d",.65,-.55,.2,.65],["c","#ffffffaa",.5,-.9,.12],["c","#ffffffaa",.62,-1,.09],["r","a",-.9,0,1.4,.85],["g","w",-.75,.15,.2,.2,.3,0,4,1],["r","b",-.15,.5,.3,.35]]],
+pizza:["🍕","Pizza",[["p","#f2b866",[-.8,-.7,.8,-.7,0,.95]],["r","#d9893a",-.85,-.85,1.7,.22,.1],["c","a",-.3,-.35,.14],["c","a",.3,-.35,.14],["c","a",0,.15,.14]]],
+burger:["🍔","Burger",[["e","#e9a65a",0,-.35,.8,.45],["e","#fff",-.3,-.5,.07,.04,.3],["e","#fff",.1,-.55,.07,.04,-.3],["e","#fff",.4,-.4,.07,.04,.5],["r","#7bd389",-.88,-.05,1.76,.18,.09],["r","#ffc933",-.8,.1,1.6,.12],["r","#6b3e26",-.82,.2,1.64,.28,.14],["r","#e9a65a",-.75,.5,1.5,.3,.15]]],
+donat:["🍩","Donat",[["o","#e9a65a",0,0,.92,.32],["o","a",0,0,.8,.34],["l","w",.07,.4,-.45,.5,-.35],["l","c",.07,-.5,-.35,-.4,-.45],["l","w",.07,-.25,.55,-.1,.62],["l","c",.07,.55,.15,.68,.22],["l","c",.07,-.65,.1,-.55,.2],["l","b",.07,.1,-.7,.2,-.65]]],
+eskrim:["🍦","Es Krim",[["p","#e9a65a",[-.45,-.05,.45,-.05,0,.98]],["l","#c98a3f",.04,-.3,.1,.1,.6],["l","#c98a3f",.04,.3,.1,-.1,.6],["c","a",0,-.3,.5],["r","a",-.5,-.3,1,.25,.12],["c","#e63946",0,-.85,.12]]],
+cupcake:["🧁","Cupcake",[["p","b",[-.55,0,.55,0,.4,.85,-.4,.85]],["l","w",.05,-.2,.05,-.15,.8],["l","w",.05,.2,.05,.15,.8],["c","a",0,-.15,.52],["c","a",0,-.5,.34],["c","a",0,-.78,.18],["c","c",0,-.97,.1],["c","w",-.2,-.15,.05]]],
+semangka:["🍉","Semangka",[["d","#3a9d5d",0,-.45,.95],["d","#fff",0,-.45,.82],["d","#e63946",0,-.45,.72],["e","d",-.3,0,.05,.09,.3],["e","d",.3,0,.05,.09,-.3],["e","d",0,.15,.05,.09],["e","d",-.2,.3,.05,.09],["e","d",.2,.3,.05,.09]]],
+wortel:["🥕","Wortel",[["e","#4caf50",-.12,-.72,.1,.3,.35],["e","#4caf50",.12,-.72,.1,.3,-.35],["e","#4caf50",0,-.78,.08,.3],["p","#ff8c42",[-.3,-.45,.3,-.45,.04,.98,-.04,.98]],["l","#e07b30",.05,-.2,-.2,.1,-.15],["l","#e07b30",.05,.2,0,-.05,.05],["l","#e07b30",.05,-.15,.3,.1,.35]]],
+kopi:["☕","Kopi",[["e","b",-.1,.78,.85,.14],["r","a",-.7,-.3,1.1,1.05,.25],["o","a",.4,.1,.38,.2],["e","#6b3e26",-.15,-.3,.55,.1],["l","rgba(255,255,255,.75)",.07,-.35,-.55,-.25,-.95],["l","rgba(255,255,255,.75)",.07,.05,-.55,.15,-.95]]],
+soda:["🥤","Minuman Soda",[["l","c",.12,.1,-.5,.3,-1],["p","a",[-.5,-.4,.5,-.4,.38,.95,-.38,.95]],["p","rgba(255,255,255,.35)",[-.47,-.05,.47,-.05,.45,.2,-.45,.2]],["r","b",-.58,-.55,1.16,.18,.08]]],
+botol:["💧","Botol Air",[["r","#bfe9ff",-.2,-.7,.4,.5],["r","#bfe9ff",-.42,-.3,.84,1.25,.25],["r","a",-.22,-.88,.44,.2,.05],["r","a",-.42,.1,.84,.45],["c","w",0,.32,.12]]],
+boba:["🧋","Bubble Tea",[["l","a",.12,.1,.1,.3,-1],["p","rgba(255,255,255,.5)",[-.5,-.15,.5,-.15,.38,.95,-.38,.95]],["p","#c8935a",[-.45,.15,.45,.15,.38,.95,-.38,.95]],["c","d",-.2,.8,.09],["c","d",.05,.82,.09],["c","d",.25,.75,.09],["c","d",-.05,.65,.09],["c","d",.15,.6,.09],["r","b",-.55,-.3,1.1,.18,.08]]],
+wine:["🍷","Gelas Anggur",[["r","rgba(255,255,255,.65)",-.5,-.95,1,.45],["d","rgba(255,255,255,.65)",0,-.5,.5],["r","a",-.46,-.65,.92,.15],["d","a",0,-.5,.46],["r","w",-.05,0,.1,.72],["e","w",0,.78,.32,.08]]],
+jeruk:["🍊","Jeruk",[["c","#ff9f1c",0,0,.9],["c","#ffd166",0,0,.74],["l","#ff9f1c",.05,-.74,0,.74,0],["l","#ff9f1c",.05,0,-.74,0,.74],["l","#ff9f1c",.05,-.52,-.52,.52,.52],["l","#ff9f1c",.05,.52,-.52,-.52,.52]]],
+pohon:["🌳","Pohon",[["r","#8d5a2b",-.1,.1,.2,.88],["c","a",0,-.4,.5],["c","a",-.4,-.05,.4],["c","a",.4,-.05,.4],["c","rgba(255,255,255,.18)",-.15,-.5,.2]]],
+pinus:["🌲","Pohon Pinus",[["r","#8d5a2b",-.08,.72,.16,.28],["p","a",[-.65,.78,.65,.78,0,.1]],["p","b",[-.52,.38,.52,.38,0,-.3]],["p","a",[-.4,-.02,.4,-.02,0,-.9]]]],
+bunga:["🌸","Bunga",[["l","#4caf50",.1,0,.3,0,1],["e","#4caf50",.22,.75,.25,.1,-.5],["e","a",0,-.45,.22,.38,0],["e","a",.43,-.14,.22,.38,1.257],["e","a",.26,.36,.22,.38,2.513],["e","a",-.26,.36,.22,.38,3.77],["e","a",-.43,-.14,.22,.38,5.03],["c","c",0,0,.22]]],
+daun:["🍃","Daun",[["s","a",[0,-.95,.55,-.4,.5,.3,0,.85,-.5,.3,-.55,-.4]],["l","rgba(255,255,255,.5)",.05,0,-.7,0,.95]]],
+kaktus:["🌵","Kaktus",[["p","#c9733f",[-.4,.5,.4,.5,.3,1,-.3,1]],["r","a",-.2,-.7,.4,1.3,.2],["r","a",-.55,-.2,.2,.5,.1],["r","a",-.55,.1,.4,.2,.1],["r","a",.35,-.4,.2,.5,.1],["r","a",.15,-.1,.4,.2,.1],["c","c",0,-.75,.1]]],
+gunung:["⛰️","Gunung",[["p","a",[-1,.8,-.25,-.7,.5,.8]],["p","b",[-.1,.8,.5,-.3,1,.8]],["p","w",[-.25,-.7,-.45,-.35,-.25,-.4,-.05,-.3]]]],
+matahari:["☀️","Matahari",[["v","c",.12,8,.65,.95],["c","c",0,0,.5]]],
+awan:["☁️","Awan",[["c","#f2f7ff",-.4,.1,.4],["c","#f2f7ff",0,-.15,.5],["c","#f2f7ff",.45,.1,.38],["r","#f2f7ff",-.4,.1,.85,.4,.2]]],
+bulan:["🌙","Bulan Sabit",[["u","c",0,0,.9,.4,-.2,.75]]],
+tetes:["💧","Tetes Air",[["p","b",[0,-.95,.5,.1,-.5,.1]],["c","b",0,.25,.5],["e","rgba(255,255,255,.5)",-.2,.25,.08,.18,.3]]],
+mobil:["🚗","Mobil",[["r","a",-.95,0,1.9,.55,.2],["p","a",[-.55,0,-.35,-.5,.35,-.5,.6,0]],["p","#cfe9ff",[-.45,-.05,-.3,-.4,-.02,-.4,-.02,-.05]],["p","#cfe9ff",[.05,-.05,.05,-.4,.3,-.4,.48,-.05]],["r","c",.85,.1,.1,.15,.03],["c","d",-.5,.55,.25],["c","d",.5,.55,.25],["c","#c9ced8",-.5,.55,.1],["c","#c9ced8",.5,.55,.1]]],
+bus:["🚌","Bus",[["r","a",-.95,-.5,1.9,1.1,.15],["g","#cfe9ff",-.8,-.35,.35,.35,.45,0,4,1],["r","b",-.95,.1,1.9,.12],["c","d",-.5,.65,.22],["c","d",.5,.65,.22],["c","#c9ced8",-.5,.65,.09],["c","#c9ced8",.5,.65,.09]]],
+pesawat:["✈️","Pesawat",[["p","b",[-.1,-.2,-.95,.35,-.95,.5,-.1,.3,.1,.3,.95,.5,.95,.35,.1,-.2]],["p","b",[-.08,.65,-.4,.95,-.08,.88,.08,.88,.4,.95,.08,.65]],["e","a",0,0,.14,.95],["e","#cfe9ff",0,-.55,.06,.12]]],
+kapal:["⛵","Kapal Layar",[["p","d",[-.8,.35,.8,.35,.55,.8,-.55,.8]],["l","d",.05,0,-.85,0,.35],["p","w",[.05,-.8,.7,.25,.05,.25]],["p","a",[-.05,-.6,-.6,.25,-.05,.25]],["l","b",.08,-.95,.92,.95,.92]]],
+sepeda:["🚲","Sepeda",[["o","d",-.55,.35,.42,.35],["o","d",.55,.35,.42,.35],["l","a",.08,-.55,.35,-.2,-.15],["l","a",.08,-.2,-.15,0,.35],["l","a",.08,-.55,.35,0,.35],["l","a",.08,-.2,-.15,.4,-.15],["l","a",.08,.4,-.15,.55,.35],["l","a",.08,0,.35,.4,-.15],["r","d",-.35,-.27,.3,.08,.04],["l","d",.08,.3,-.3,.5,-.3]]],
+balonudara:["🎈","Balon Udara",[["c","a",0,-.35,.6],["p","a",[-.5,-.1,.5,-.1,.15,.35,-.15,.35]],["e","b",0,-.35,.2,.6],["l","d",.03,-.15,.35,-.12,.55],["l","d",.03,.15,.35,.12,.55],["r","#8d5a2b",-.15,.55,.3,.2,.04]]],
+laptop:["💻","Laptop",[["r","d",-.7,-.6,1.4,.9,.08],["r","a",-.6,-.5,1.2,.7,.04],["l","w",.05,-.4,-.3,.1,-.3],["l","w",.05,-.4,-.15,.3,-.15],["l","w",.05,-.4,0,-.05,0],["p","#c9ced8",[-.95,.35,.95,.35,.8,.55,-.8,.55]]]],
+ponsel:["📱","Ponsel",[["r","d",-.4,-.95,.8,1.9,.15],["r","a",-.32,-.8,.64,1.5,.05],["c","c",0,-.1,.2],["c","w",0,.82,.06]]],
+roket:["🚀","Roket",[["p","a",[-.33,.1,-.7,.65,-.33,.5]],["p","a",[.33,.1,.7,.65,.33,.5]],["p","c",[-.2,.5,.2,.5,0,1]],["s","#f4f6fa",[0,-1,.35,-.4,.35,.4,-.35,.4,-.35,-.4]],["c","b",0,-.2,.16]]],
+gigi:["⚙️","Roda Gigi",[["v","a",.32,8,.5,.8],["o","a",0,0,.62,.25]]],
+wifi:["📶","Wi-Fi",[["a","a",.14,0,.5,.4,-2.35,-.8],["a","a",.14,0,.5,.7,-2.35,-.8],["a","a",.14,0,.5,1,-2.35,-.8],["c","a",0,.5,.1]]],
+robot:["🤖","Robot",[["l","d",.06,0,-.5,0,-.85],["c","c",0,-.9,.1],["r","b",-.75,-.15,.15,.4,.05],["r","b",.6,-.15,.15,.4,.05],["r","a",-.6,-.5,1.2,.9,.2],["c","w",-.25,-.1,.15],["c","w",.25,-.1,.15],["c","d",-.25,-.1,.07],["c","d",.25,-.1,.07],["r","d",-.3,.18,.6,.1,.05],["r","b",-.45,.5,.9,.45,.12]]],
+grafik:["📊","Grafik Bisnis",[["r","a",-.8,.1,.35,.8,.05],["r","b",-.2,-.3,.35,1.2,.05],["r","c",.4,-.7,.35,1.6,.05],["l","d",.05,-.95,.95,.95,.95]]],
+koin:["🪙","Koin",[["c","c",0,0,.9],["o","rgba(255,255,255,.5)",0,0,.72,.65],["t","$","d",.9]]],
+kopkerja:["💼","Koper Kerja",[["a","a",.12,0,-.35,.3,3.14,6.28],["r","a",-.9,-.35,1.8,1.2,.15],["r","rgba(0,0,0,.2)",-.9,.15,1.8,.12],["r","c",-.1,.08,.2,.25,.04]]],
+target:["🎯","Target",[["c","a",0,0,.9],["c","w",0,0,.68],["c","a",0,0,.46],["c","w",0,0,.24],["c","b",0,0,.12],["l","d",.07,0,0,.8,-.8],["p","c",[.62,-.98,.98,-.98,.98,-.62]],["p","c",[.62,-.7,.98,-.98,.7,-.62]]]],
+surat:["✉️","Surat",[["r","w",-.9,-.55,1.8,1.1,.08],["p","b",[-.9,-.5,0,.15,.9,-.5]],["l","a",.06,-.9,.5,-.3,-.05],["l","a",.06,.9,.5,.3,-.05]]],
+kalender:["📅","Kalender",[["r","w",-.8,-.7,1.6,1.6,.12],["r","a",-.8,-.7,1.6,.45,.12],["l","d",.1,-.4,-.85,-.4,-.55],["l","d",.1,.4,-.85,.4,-.55],["g","b",-.6,-.05,.25,.2,.4,.35,3,2]]],
+sepakbola:["⚽","Bola Sepak",[["c","w",0,0,.9],["o","d",0,0,.93,.88],["p","d",[0,-.3,.28,-.1,.17,.22,-.17,.22,-.28,-.1]],["l","d",.05,0,-.3,0,-.6],["l","d",.05,.28,-.1,.62,-.25],["l","d",.05,-.28,-.1,-.62,-.25],["l","d",.05,.17,.22,.3,.6],["l","d",.05,-.17,.22,-.3,.6]]],
+basket:["🏀","Bola Basket",[["c","#ff8c42",0,0,.9],["l","d",.05,-.9,0,.9,0],["l","d",.05,0,-.9,0,.9],["a","d",.05,-1.05,0,.65,-.8,.8],["a","d",.05,1.05,0,.65,2.34,3.94],["o","d",0,0,.93,.88]]],
+tenis:["🎾","Bola Tenis",[["c","#d6ff3f",0,0,.9],["a","w",.09,-1,0,.9,-.6,.6],["a","w",.09,1,0,.9,2.54,3.74]]],
+dumbel:["🏋️","Dumbel",[["l","d",.12,-.7,0,.7,0],["r","a",-.95,-.5,.22,1,.08],["r","b",-.73,-.35,.2,.7,.06],["r","b",.53,-.35,.2,.7,.06],["r","a",.73,-.5,.22,1,.08]]],
+piala:["🏆","Piala",[["o","c",-.65,-.45,.3,.2],["o","c",.65,-.45,.3,.2],["r","c",-.6,-.85,1.2,.35,.05],["d","c",0,-.5,.6],["r","c",-.1,.1,.2,.4],["r","b",-.4,.5,.8,.3,.06]]],
+medali:["🥇","Medali",[["p","b",[-.45,-.95,-.05,-.95,.25,-.1,-.15,-.1]],["p","a",[.45,-.95,.05,-.95,-.25,-.1,.15,-.1]],["c","c",0,.35,.58],["o","rgba(255,255,255,.4)",0,.35,.48,.4],["t","1","d",.7,0,.35]]],
+koper:["🧳","Koper Travel",[["a","d",.1,0,-.45,.28,3.14,6.28],["r","a",-.7,-.45,1.4,1.3,.15],["r","b",-.35,-.45,.12,1.3],["r","b",.23,-.45,.12,1.3],["c","d",-.45,.92,.08],["c","d",.45,.92,.08]]],
+kamera:["📷","Kamera",[["r","d",-.4,-.6,.5,.25,.06],["r","d",-.9,-.4,1.8,1.2,.2],["c","#8890a6",0,.2,.5],["c","a",0,.2,.36],["c","w",-.12,.08,.08],["r","c",.55,-.25,.2,.15,.04]]],
+pin:["📍","Pin Lokasi",[["c","a",0,-.35,.55],["p","a",[-.5,-.1,.5,-.1,0,.95]],["c","w",0,-.35,.2]]],
+tenda:["⛺","Tenda",[["p","a",[-.95,.8,0,-.8,.95,.8]],["p","b",[-.3,.8,0,0,.3,.8]],["p","d",[-.22,.8,0,.1,.22,.8]],["l","d",.05,0,-.8,0,-1],["r","d",-1,.8,2,.1,.03]]],
+kompas:["🧭","Kompas",[["c","d",0,0,.92],["c","w",0,0,.76],["v","d",.05,4,.62,.72],["p","a",[0,-.6,.18,0,-.18,0]],["p","d",[0,.6,.18,0,-.18,0]],["c","c",0,0,.06]]],
+payung:["⛱️","Payung Pantai",[["l","d",.06,0,-.1,0,.9],["p","a",[-.95,-.05,0,-.95,.95,-.05]],["p","b",[-.32,-.05,0,-.95,.32,-.05]]]],
+tabung:["🧪","Labu Kimia",[["p","rgba(255,255,255,.6)",[-.2,-.9,.2,-.9,.2,-.3,.75,.7,.75,.9,-.75,.9,-.75,.7,-.2,-.3]],["p","a",[-.55,.35,.55,.35,.75,.7,.75,.9,-.75,.9,-.75,.7]],["c","w",-.1,.6,.07],["c","w",.2,.5,.05],["r","d",-.28,-.95,.56,.1,.04]]],
+mikroskop:["🔬","Mikroskop",[["r","d",-.6,.75,1.2,.15,.05],["a","d",.14,.15,.15,.6,-1.3,1.5],["r","d",-.35,.35,.6,.1,.03],["x",-.35],["r","a",-.14,-.95,.28,.8,.05],["r","b",-.18,-.18,.36,.12,.03],["r","d",-.1,-1.05,.2,.12,.03]]],
+palang:["➕","Palang Medis",[["c","w",0,0,.9],["r","a",-.2,-.6,.4,1.2,.08],["r","a",-.6,-.2,1.2,.4,.08]]],
+pil:["💊","Pil",[["x",.785],["r","w",-.85,-.32,1.7,.64,.32],["r","a",-.85,-.32,.95,.64,.32],["l","rgba(255,255,255,.4)",.06,-.55,-.15,0,-.15]]],
+hati:["❤️","Hati",[["c","a",-.3,-.25,.38],["c","a",.3,-.25,.38],["p","a",[-.66,-.05,.66,-.05,0,.85]]]],
+gitar:["🎸","Gitar",[["x",.6],["r","#8d5a2b",-.07,-1,.14,.95],["r","d",-.12,-1.05,.24,.2,.04],["c","a",0,.4,.45],["c","a",0,-.02,.33],["c","d",0,.32,.14],["l","w",.02,0,-.9,0,.55]]],
+headphone:["🎧","Headphone",[["a","d",.12,0,.1,.7,3.14,6.28],["r","a",-.85,.05,.3,.65,.12],["r","a",.55,.05,.3,.65,.12],["r","b",-.78,.15,.16,.45,.06],["r","b",.62,.15,.16,.45,.06]]],
+palet:["🎨","Palet Cat",[["s","#e8c99b",[-.9,0,-.5,-.7,.3,-.8,.9,-.2,.8,.5,.2,.8,-.3,.6,-.8,.6]],["c","a",-.45,-.2,.14],["c","b",0,-.45,.14],["c","c",.45,-.2,.14],["c","#4caf50",.4,.25,.14]]],
+gamepad:["🎮","Gamepad",[["r","d",-.95,-.35,1.9,.8,.35],["r","w",-.65,-.1,.4,.1],["r","w",-.5,-.25,.1,.4],["c","a",.45,-.05,.1],["c","b",.65,.1,.1],["c","c",.3,.1,.1]]],
+hadiah:["🎁","Hadiah",[["r","a",-.8,-.25,1.6,1.1,.08],["r","b",-.9,-.5,1.8,.3,.06],["r","c",-.12,-.5,.24,1.35],["e","c",-.3,-.65,.28,.18,-.4],["e","c",.3,-.65,.28,.18,.4]]],
+balon:["🎈","Balon",[["e","a",0,-.2,.5,.65],["p","a",[-.08,.42,.08,.42,0,.52]],["l","d",.03,0,.52,.1,.95],["e","rgba(255,255,255,.4)",-.2,-.4,.1,.2,.4]]],
+masjid:["🕌","Masjid",[["r","b",-.9,-.4,.22,1.3],["r","b",.68,-.4,.22,1.3],["p","c",[-.92,-.4,-.68,-.4,-.8,-.72]],["p","c",[.68,-.4,.92,-.4,.8,-.72]],["c","a",0,-.25,.5],["r","a",-.5,-.25,1,.8],["l","c",.05,0,-.75,0,-.95],["r","d",-.12,.2,.24,.35,.12],["r","d",-1,.9,2,.08,.03]]],
+lampion:["🏮","Lampion",[["l","d",.04,0,-.65,0,-.95],["e","a",0,0,.65,.55],["r","c",-.25,-.65,.5,.12],["r","c",-.25,.5,.5,.12],["e","rgba(0,0,0,.12)",0,0,.3,.55],["l","c",.05,0,.62,0,.95]]],
+pagoda:["🏯","Pagoda",[["r","b",-.45,.35,.9,.55],["p","a",[-1,.35,-.6,.1,.6,.1,1,.35]],["r","b",-.35,-.1,.7,.35],["p","a",[-.8,-.1,-.5,-.3,.5,-.3,.8,-.1]],["r","b",-.22,-.5,.44,.25],["p","a",[-.6,-.5,-.3,-.75,.3,-.75,.6,-.5]],["l","c",.05,0,-.75,0,-1],["r","d",-.1,.6,.2,.3]]],
+gereja:["⛪","Gereja",[["r","a",-.55,-.1,1.1,.95],["p","b",[-.65,-.1,0,-.55,.65,-.1]],["r","a",-.18,-.75,.36,.65],["p","b",[-.26,-.75,0,-.95,.26,-.75]],["l","c",.06,0,-1.05,0,-.9],["r","d",-.12,.35,.24,.5,.12],["c","c",0,-.45,.08]]],
+turbin:["🌬️","Turbin Angin",[["p","#e8edf5",[-.07,.95,.07,.95,.03,0,-.03,0]],["xt",1],["p","a",[-.06,-.05,.06,-.05,.03,-.95,-.03,-.95]],["x",2.094],["p","a",[-.06,-.05,.06,-.05,.03,-.95,-.03,-.95]],["x",2.094],["p","a",[-.06,-.05,.06,-.05,.03,-.95,-.03,-.95]],["c","b",0,0,.1]]],
+surya:["🔆","Panel Surya",[["l","d",.08,0,.3,0,.8],["r","d",-.4,.8,.8,.1,.03],["p","a",[-.9,.3,-.6,-.5,.9,-.5,.6,.3]],["l","w",.04,-.3,.3,0,-.5],["l","w",.04,.15,.3,.45,-.5],["l","w",.04,-.75,-.1,.75,-.1],["c","c",.8,-.8,.18]]],
+daur:["♻️","Daur Ulang",[["a","a",.16,0,0,.6,0,2],["a","a",.16,0,0,.6,2.1,4.1],["a","a",.16,0,0,.6,4.2,6.2],["p","a",[-.34,.745,-.52,.42,-.16,.345]],["p","a",[-.47,-.67,-.1,-.66,-.22,-.31]],["p","a",[.82,-.07,.623,.25,.378,-.03]]]],
+lingkaran:["⚪","Lingkaran",[["c","x",0,0,.9]]],
+cincin:["⭕","Cincin",[["o","x",0,0,.9,.55]]],
+segitiga:["🔺","Segitiga",[["p","x",[0,-.9,.9,.7,-.9,.7]]]],
+persegi:["🟦","Persegi",[["r","x",-.75,-.75,1.5,1.5,.14]]],
+wajik:["🔶","Wajik",[["p","x",[0,-.95,.95,0,0,.95,-.95,0]]]],
+heksagon:["⬢","Heksagon",[["p","x",[.95,0,.475,.82,-.475,.82,-.95,0,-.475,-.82,.475,-.82]]]],
+plus:["➕","Plus",[["r","x",-.25,-.85,.5,1.7,.1],["r","x",-.85,-.25,1.7,.5,.1]]],
+kilau:["✨","Kilau",[["p","x",[0,-1,.2,-.2,1,0,.2,.2,0,1,-.2,.2,-1,0,-.2,-.2]]]],
+setengah:["🌓","Setengah Lingkaran",[["d","x",0,-.45,.9]]],
+squiggle:["〰️","Zigzag",[["l","x",.2,-.9,0,-.45,-.4],["l","x",.2,-.45,-.4,0,.4],["l","x",.2,0,.4,.45,-.4],["l","x",.2,.45,-.4,.9,0]]],
+blob:["🫧","Blob",[["s","x",[0,-.9,.7,-.5,.9,.3,.2,.9,-.6,.7,-.9,-.1]]]],
+sasaran:["🔘","Cincin Ganda",[["o","x",0,0,.9,.6],["c","x",0,0,.4]]]
+};
+Object.entries(NI).forEach(([k,v])=>{IC[k]=[v[0],v[1],(c,P)=>dsl(c,P,v[2])]});
+const CAT={
+sekolah:["buku","pensil","penggaris","topi","gedung","globe","atom","bel","jam","tas","apel","bintang","bulb","calc","aplus","pi"],
+hewan:["kucing","anjing","ikan","burung","kupu","kelinci","penguin","lebah","paus"],
+bangunan:["rumah","apartemen","kastil","toko","mercusuar","pabrik","gedung"],
+makanan:["pizza","burger","donat","eskrim","cupcake","semangka","wortel","apel"],
+minuman:["kopi","soda","botol","boba","wine","jeruk"],
+alam:["pohon","pinus","bunga","daun","kaktus","gunung","matahari","awan","bulan","tetes"],
+transport:["mobil","bus","pesawat","kapal","sepeda","balonudara"],
+teknologi:["laptop","ponsel","roket","gigi","wifi","robot","bulb"],
+bisnis:["grafik","koin","kopkerja","target","surat","kalender","bulb"],
+olahraga:["sepakbola","basket","tenis","dumbel","piala","medali"],
+travel:["koper","kamera","pin","tenda","kompas","payung","pesawat","globe"],
+sains:["tabung","mikroskop","palang","pil","hati","atom"],
+hobi:["gitar","headphone","palet","gamepad","hadiah","balon","kamera"],
+budaya:["masjid","lampion","pagoda","gereja","bulan","bintang"],
+lingkungan:["turbin","surya","daur","tetes","daun","pohon","globe"],
+abstrak:["lingkaran","cincin","segitiga","persegi","wajik","heksagon","plus","kilau","setengah","squiggle","blob","sasaran"]
+};
+// ===== Latar =====
+const BG={
+solid:(c,w,h,t,P)=>{c.fillStyle=P[0];c.fillRect(0,0,w,h)},
+gradasi:(c,w,h,t,P)=>{const g=c.createLinearGradient(0,0,w,h);g.addColorStop(0,P[0]);g.addColorStop(1,P[1]);c.fillStyle=g;c.fillRect(0,0,w,h);c.globalCompositeOperation="screen";[2,3,4].forEach((q,i)=>{const a=TAU*t*(i%2?-1:1)+i*2.1,cx=w/2+w*.3*Math.cos(a),cy=h/2+h*.3*Math.sin(a),R=Math.max(w,h)*.5,rg=c.createRadialGradient(cx,cy,0,cx,cy,R);rg.addColorStop(0,rgba(P[q],.55));rg.addColorStop(1,rgba(P[q],0));c.fillStyle=rg;c.fillRect(0,0,w,h)});c.globalCompositeOperation="source-over"},
+waves:(c,w,h,t,P,r)=>{const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,P[0]);g.addColorStop(1,P[1]);c.fillStyle=g;c.fillRect(0,0,w,h);
+ for(let i=0;i<5;i++){const k=(i%3)+1,ph=r()*TAU,f=1+r()*1.5,amp=h*(.05+.03*r()),base=h*(.4+i*.12);c.fillStyle=rgba(P[2+i%3],.5);c.beginPath();c.moveTo(0,h);
+  for(let x=0;x<=w;x+=w/120){const u=x/w*TAU*f;c.lineTo(x,base+amp*Math.sin(u+ph+TAU*t*k))}c.lineTo(w,h);c.closePath();c.fill()}},
+papan:(c,w,h,t,P,r)=>{const g=c.createLinearGradient(0,0,w,h);g.addColorStop(0,"#2a5545");g.addColorStop(1,"#17352a");c.fillStyle=g;c.fillRect(0,0,w,h);
+ c.font=`${h*.07}px "Segoe Print","Comic Sans MS",cursive`;c.fillStyle="rgba(255,255,255,.13)";c.textAlign="left";c.fillText("a² + b² = c²",w*.06,h*.2);c.fillText("E = mc²",w*.64,h*.86);c.fillText("2 + 2 = 4",w*.07,h*.88);c.fillText("H₂O",w*.78,h*.2);
+ for(let i=0;i<40;i++){const x=r()*w,y0=r(),s=h*(.002+.004*r()),y=(((y0-t)%1)+1)%1*h;c.fillStyle=`rgba(255,255,255,${.15+.3*r()})`;c.beginPath();c.arc(x,y,s,0,TAU);c.fill()}
+ const b=Math.min(w,h)*.035;c.strokeStyle="#a0692f";c.lineWidth=b;c.strokeRect(b/2,b/2,w-b,h-b)},
+buku:(c,w,h,t)=>{c.fillStyle="#fdfaf0";c.fillRect(0,0,w,h);const s=h/13;c.strokeStyle="rgba(86,150,214,.55)";c.lineWidth=Math.max(1,h*.003);for(let k=-1;k<15;k++){const y=(k-t)*s+s*1.5;c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke()}c.strokeStyle="rgba(226,80,80,.6)";c.lineWidth=h*.004;c.beginPath();c.moveTo(w*.1,0);c.lineTo(w*.1,h);c.stroke()},
+grid:(c,w,h,t)=>{c.fillStyle="#f3f9ff";c.fillRect(0,0,w,h);const s=h/12,o=t*5*s;for(let i=-6;i<=w/s+6;i++){c.strokeStyle=i%5?"rgba(70,140,220,.22)":"rgba(70,140,220,.5)";c.lineWidth=Math.max(1,h*(i%5?.002:.003));const x=i*s+o;c.beginPath();c.moveTo(x,0);c.lineTo(x,h);c.stroke()}
+ for(let j=-6;j<=h/s+6;j++){c.strokeStyle=j%5?"rgba(70,140,220,.22)":"rgba(70,140,220,.5)";c.lineWidth=Math.max(1,h*(j%5?.002:.003));const y=j*s+o;c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke()}},
+bokeh:(c,w,h,t,P,r)=>{const g=c.createLinearGradient(0,0,w*.4,h);g.addColorStop(0,P[0]);g.addColorStop(1,P[1]);c.fillStyle=g;c.fillRect(0,0,w,h);c.globalCompositeOperation="screen";
+ for(let i=0;i<40;i++){const x0=r()*w,y0=r(),R=h*(.015+.07*r()*r()),sp=1+Math.floor(r()*2),sw=h*.03*r(),ph=r()*TAU,col=P[2+Math.floor(r()*3)],al=.15+.4*r(),y=(((y0-t*sp)%1)+1)%1*(h+R*4)-R*2,x=x0+sw*Math.sin(TAU*t+ph),g2=c.createRadialGradient(x,y,R*.2,x,y,R);g2.addColorStop(0,rgba(col,al*.5));g2.addColorStop(.85,rgba(col,al));g2.addColorStop(1,rgba(col,0));c.fillStyle=g2;c.beginPath();c.arc(x,y,R,0,TAU);c.fill()}c.globalCompositeOperation="source-over"}
+};
+
+Object.assign(BG,{
+langit:(c,w,h,t,P,r)=>{const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,"#5bb8ff");g.addColorStop(1,"#e4f5ff");c.fillStyle=g;c.fillRect(0,0,w,h);
+ for(let i=0;i<7;i++){const y=h*(.08+.6*r()),s=h*(.05+.06*r()),u=(((r()+t*(1+i%2))%1)+1)%1,x=u*(w+s*8)-s*4,f="rgba(255,255,255,.92)";Ci(c,f,x,y,s);Ci(c,f,x+s*1.1,y-s*.35,s*1.2);Ci(c,f,x+s*2.3,y,s*.95);R(c,f,x,y,s*2.3,s,s*.4)}},
+malam:(c,w,h,t,P,r)=>{const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,"#070b24");g.addColorStop(1,"#2a1b5e");c.fillStyle=g;c.fillRect(0,0,w,h);
+ for(let i=0;i<90;i++){const x=r()*w,y=r()*h,s=h*(.002+.004*r()),ph=r()*TAU,a=.35+.65*(.5+.5*Math.sin(TAU*t*(1+i%2)+ph));Ci(c,`rgba(255,255,255,${a})`,x,y,s)}},
+laut:(c,w,h,t,P,r)=>BG.waves(c,w,h,t,PALS[3],r),
+kota:(c,w,h,t,P,r)=>{const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,P[0]);g.addColorStop(1,P[2]);c.fillStyle=g;c.fillRect(0,0,w,h);
+ [[1,.55,.55],[2,.85,1]].forEach(([k,hh,al],L)=>{const n=14;for(let i=0;i<n;i++){const bw=w*(.07+.06*r()),bh=h*hh*(.25+.5*r()),u=(((i/n+t*k)%1)+1)%1,x0=u*w;
+  [x0,x0-w].forEach(x=>{c.fillStyle=rgba(P[1],al);c.fillRect(x,h-bh,bw,bh);if(L){c.fillStyle=rgba(P[4],.75);const ww=bw*.12,nb=Math.floor(bh/(h*.06));for(let a=0;a<4;a++)for(let b=0;b<nb;b++)if((i*3+a+b*2)%3==0)c.fillRect(x+bw*.14+a*bw*.22,h-bh+h*.025+b*h*.06,ww,h*.03)}})}})},
+aurora:(c,w,h,t,P,r)=>{const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,"#04060f");g.addColorStop(1,"#0d1b3d");c.fillStyle=g;c.fillRect(0,0,w,h);c.globalCompositeOperation="screen";
+ for(let b=0;b<3;b++){const ph=r()*TAU,col=P[2+b],k=1+b%2,base=h*(.28+.12*b),amp=h*.1,gg=c.createLinearGradient(0,base-amp,0,base+h*.4);gg.addColorStop(0,rgba(col,0));gg.addColorStop(.3,rgba(col,.6));gg.addColorStop(1,rgba(col,0));c.fillStyle=gg;c.beginPath();c.moveTo(0,h);
+  for(let x=0;x<=w;x+=w/100){const u=x/w*TAU;c.lineTo(x,base+amp*Math.sin(u*1.5+ph+TAU*t*k)+amp*.5*Math.sin(u*3.1-TAU*t))}c.lineTo(w,h);c.closePath();c.fill()}c.globalCompositeOperation="source-over"},
+hexagon:(c,w,h,t,P)=>{c.fillStyle=P[0];c.fillRect(0,0,w,h);const s=h/9,dx=s*Math.sqrt(3),cols=Math.ceil(w/dx)+2,rows=Math.ceil(h/(s*1.5))+2;
+ for(let j=-1;j<rows;j++)for(let i=-1;i<cols;i++){const x=i*dx+(j&1?dx/2:0),y=j*s*1.5,v=.5+.5*Math.sin(TAU*(t-(x/w+y/h)*.7));c.fillStyle=rgba(P[2+(i+2*j+30)%3],.15+.6*v);c.beginPath();for(let q=0;q<6;q++){const a=Math.PI/6+q*Math.PI/3,px=x+s*.93*Math.cos(a),py=y+s*.93*Math.sin(a);q?c.lineTo(px,py):c.moveTo(px,py)}c.closePath();c.fill()}},
+sunburst:(c,w,h,t,P)=>{c.fillStyle=P[0];c.fillRect(0,0,w,h);const N=24,Rr=Math.hypot(w,h),a0=t*TAU/12;for(let i=0;i<N;i+=2){c.fillStyle=rgba(P[2],.3);c.beginPath();c.moveTo(w/2,h/2);c.arc(w/2,h/2,Rr,a0+i*TAU/N,a0+(i+1)*TAU/N);c.closePath();c.fill()}
+ const g=c.createRadialGradient(w/2,h/2,0,w/2,h/2,h*.6);g.addColorStop(0,rgba(P[4],.8));g.addColorStop(1,rgba(P[4],0));c.fillStyle=g;c.fillRect(0,0,w,h)},
+garis:(c,w,h,t,P)=>{const g=c.createLinearGradient(0,0,w,h);g.addColorStop(0,P[0]);g.addColorStop(1,P[1]);c.fillStyle=g;c.fillRect(0,0,w,h);c.globalCompositeOperation="lighter";c.lineWidth=Math.max(1,h*.003);
+ for(let i=0;i<36;i++){const f=i/36;c.strokeStyle=rgba(P[2+i%3],.5);c.beginPath();for(let x=0;x<=w;x+=w/90){const u=x/w*TAU,y=h*(.3+.4*f)+h*.12*Math.sin(u*1.2+f*5+TAU*t)*Math.sin(u*.5+f*2)+h*.04*Math.sin(u*3+TAU*t*2+f*8);x?c.lineTo(x,y):c.moveTo(x,y)}c.stroke()}c.globalCompositeOperation="source-over"},
+blobs:(c,w,h,t,P,r)=>{const g=c.createLinearGradient(0,0,w*.4,h);g.addColorStop(0,P[0]);g.addColorStop(1,P[1]);c.fillStyle=g;c.fillRect(0,0,w,h);c.globalCompositeOperation="screen";
+ for(let i=0;i<7;i++){const ph=r()*TAU,ox=w*(.15+.7*r()),oy=h*(.15+.7*r()),orb=h*(.08+.12*r()),R0=h*(.18+.16*r()),dir=i%2?1:-1,col=P[2+i%3],s1=r()*TAU,s2=r()*TAU,cx=ox+orb*Math.cos(TAU*t*dir+ph),cy=oy+orb*Math.sin(TAU*t*dir+ph),gr=c.createRadialGradient(cx,cy,0,cx,cy,R0*1.2);gr.addColorStop(0,rgba(col,.9));gr.addColorStop(1,rgba(col,.05));c.fillStyle=gr;c.beginPath();
+  for(let a=0;a<=TAU+.05;a+=TAU/90){const rr=R0*(1+.16*Math.sin(3*a+TAU*t+s1)+.1*Math.sin(2*a-TAU*t*2+s2)),x=cx+rr*Math.cos(a),y=cy+rr*Math.sin(a);a?c.lineTo(x,y):c.moveTo(x,y)}c.closePath();c.fill()}c.globalCompositeOperation="source-over"},
+rings:(c,w,h,t,P)=>{const g=c.createLinearGradient(0,0,w*.4,h);g.addColorStop(0,P[0]);g.addColorStop(1,P[1]);c.fillStyle=g;c.fillRect(0,0,w,h);const N=24,Rr=Math.hypot(w,h)/2;
+ for(let i=N;i>=-3;i--){const p=(i+3*t)/N;if(p<0)continue;Ci(c,rgba(P[2+((i%3)+3)%3],.18+.5*(1-Math.min(p,1))),w/2,h/2,Rr*p*p*1.1+Rr*.02)}},
+dots:(c,w,h,t,P)=>{c.fillStyle=P[0];c.fillRect(0,0,w,h);const cols=32,s=w/cols,rows=Math.ceil(h/s)+1,cx=w/2,cy=h/2,md=Math.hypot(cx,cy);
+ for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){const x=i*s+s/2,y=j*s+(h-(rows-1)*s)/2,d=Math.hypot(x-cx,y-cy)/md,v=.5+.5*Math.sin(TAU*(t-d*1.5));Ci(c,rgba(P[2+Math.floor(v*2.99)],.35+.65*v),x,y,s*.46*(.12+.88*v))}}
+});
+// ===== Objek bergerak =====
+function objs(c,w,h,t,P,r,o){
+ const L=o.list,n=o.cnt;if(!L.length)return;const m=Math.min(w,h),sp=o.spd;
+ const cols=Math.max(1,Math.ceil(Math.sqrt(n*w/h))),rows=Math.ceil(n/cols);
+ const perm=[...Array(n).keys()];for(let i=n-1;i>0;i--){const j=Math.floor(r()*(i+1));[perm[i],perm[j]]=[perm[j],perm[i]]}
+ for(let i=0;i<n;i++){
+  const k=perm[i],a=r(),b=r(),d=r(),e=r(),f=r(),dir=e<.5?-1:1,sc=m*o.siz/200*(.6+.7*b),ph=a*TAU;
+  const gx=((k%cols)+.5+(d-.5)*.6)/cols*w,gy=(Math.floor(k/cols)+.5+(f-.5)*.6)/rows*h,sx=(k+.5+(d-.5)*.7)/n*w;
+  let x=gx,y=gy,s=1;
+  switch(o.mode){
+  case"float":x+=m*.03*Math.sin(TAU*t*sp+ph);y+=m*.04*Math.cos(TAU*t*sp+ph*1.3);break;
+  case"fall":case"rise":{const v=o.mode=="fall"?1:-1,u=(((f+t*sp*v)%1)+1)%1;x=sx+m*.03*Math.sin(TAU*t*sp+ph);y=u*(h+4*sc)-2*sc;break}
+  case"orbit":{const ring=k%3,rx=w*(.14+.12*ring),ry=h*(.14+.12*ring),an=TAU*(Math.floor(k/3)/Math.ceil(n/3))+ph*.15+TAU*t*sp*(ring%2?-1:1);x=w/2+rx*Math.cos(an);y=h/2+ry*Math.sin(an);break}
+  case"bounce":y+=m*.06-m*.14*Math.abs(Math.sin(Math.PI*(t*sp+a)));break;
+  case"pulse":s=1+.28*Math.sin(TAU*t*sp+ph);break;
+  case"wave":{const u=(((sx/w+t*sp)%1)+1)%1;x=u*(w+4*sc)-2*sc;y=h*(.12+.76*f)+h*.07*Math.sin(TAU*2*u+ph);break}
+  case"spiral":{const u=(((k/n+t*sp)%1)+1)%1,an=TAU*k*.618+u*TAU*1.2,rr=u*Math.hypot(w,h)*.5;x=w/2+rr*Math.cos(an);y=h/2+rr*Math.sin(an);s=.25+.9*u;break}
+  case"marquee":{const rw=Math.max(2,Math.round(Math.sqrt(n/2))),row=k%rw,u=(((f*3+d+t*sp*(row%2?-1:1))%1)+1)%1;x=u*(w+4*sc)-2*sc;y=(row+.5)/rw*h;break}
+  }
+  const rt=o.rot=="none"?(a-.5)*.5:o.rot=="sway"?.35*Math.sin(TAU*t*sp+ph):a*TAU+TAU*t*sp*dir;
+  OC=P[2+i%3];c.save();c.translate(x,y);c.rotate(rt);c.scale(sc*s,sc*s);c.lineCap="round";c.lineJoin="round";IC[L[i%L.length]][2](c,P);c.restore()}
+}
+
+// ===== Teks =====
+const FONTS={sans:'800 {s}px Inter,"Segoe UI",system-ui,sans-serif',serif:'800 {s}px Georgia,"Times New Roman",serif',hand:'700 {s}px "Segoe Print","Bradley Hand","Comic Sans MS","Marker Felt",cursive',round:'800 {s}px "Trebuchet MS",Verdana,sans-serif'};
+function fit(c,txt,fs,fam,mx){c.font=FONTS[fam].replace("{s}",fs);let wd=c.measureText(txt).width;if(wd>mx){fs*=mx/wd;wd=mx;c.font=FONTS[fam].replace("{s}",fs)}return[fs,wd]}
+function line(c,txt,y,fs,fam,col,wave,t){c.font=FONTS[fam].replace("{s}",fs);c.fillStyle=col;c.textBaseline="middle";
+ if(!wave){c.textAlign="center";c.fillText(txt,0,y)}else{c.textAlign="left";let x=-c.measureText(txt).width/2;[...txt].forEach((ch,i)=>{c.fillText(ch,x,y+fs*.12*Math.sin(TAU*(t-i/txt.length)));x+=c.measureText(ch).width})}}
+function text(c,w,h,t){
+ const a=$("ttl").value.trim(),b=$("sub").value.trim();if(!a&&!b)return;
+ const m=Math.min(w,h),fam=$("fnt").value,an=$("tan").value,col=$("tcl").value,pn=$("tpn").value,mx=w*.84,base=m*$("tsz").value/100;
+ const[fs,tw]=a?fit(c,a,base,fam,mx):[base,0],[sf,sw]=b?fit(c,b,a?fs*.4:base*.7,fam,mx):[fs*.4,0];
+ const cy=h*({top:.2,mid:.5,bot:.8}[$("tps").value]),y1=b?-fs*.28:0,y2=a?fs*.62:0;
+ c.save();c.translate(w/2,cy);
+ if(an=="breathe"){const s=1+.04*Math.sin(TAU*t);c.scale(s,s)}
+ if(an=="wiggle")c.rotate(.035*Math.sin(TAU*t));
+ if(an=="float")c.translate(0,m*.02*Math.sin(TAU*t));
+ if(pn!="none"){const top=(a?y1-fs*.7:y2-sf)-fs*.15,bot=(b?y2+sf*.95:y1+fs*.7)+fs*.15,pw=Math.max(tw,sw)+fs*.9;R(c,pn=="white"?"rgba(255,255,255,.93)":"rgba(15,18,28,.8)",-pw/2,top,pw,bot-top,fs*.3)}
+ else{c.shadowColor="rgba(0,0,0,.35)";c.shadowBlur=fs*.15;c.shadowOffsetY=fs*.05}
+ if(a)line(c,a,y1,fs,fam,col,an=="wave",t);
+ if(b){c.shadowColor="transparent";if(pn=="none"){c.shadowColor="rgba(0,0,0,.35)"}line(c,b,y2,sf,fam,col,an=="wave",t)}
+ c.restore();
+}
+
+// ===== Render =====
+function opts(){return{list:[...document.querySelectorAll("#chips .chip:not([hidden]) input:checked")].map(i=>i.value),cnt:+$("cnt").value,siz:+$("siz").value,spd:+$("spd").value,mode:$("mode").value,rot:$("rot").value}}
+function render(c,w,h,t){curT=t;const P=PALS[pal],s=+$("seed").value;c.save();BG[$("bg").value](c,w,h,t,P,rng(s*7+1));objs(c,w,h,t,P,rng(s*13+5),opts());c.restore();text(c,w,h,t)}
+
+// ===== UI =====
+const pe=$("pal"),ch=$("chips");
+PALS.forEach((P,i)=>{const b=document.createElement("button");b.style.background=`linear-gradient(90deg,${P.join(",")})`;b.onclick=()=>setPal(i);pe.appendChild(b)});
+function setPal(i){pal=i;[...pe.children].forEach((x,j)=>x.classList.toggle("on",j==i))}
+const CATN={sekolah:"🎓 Sekolah & Pendidikan",hewan:"🐾 Hewan",bangunan:"🏙️ Bangunan & Arsitektur",makanan:"🍔 Makanan",minuman:"🥤 Minuman",alam:"🌿 Alam, Tumbuhan & Cuaca",transport:"🚗 Transportasi",teknologi:"💻 Teknologi",bisnis:"💼 Bisnis & Keuangan",olahraga:"⚽ Olahraga",travel:"🧳 Travel & Liburan",sains:"🔬 Sains & Kesehatan",hobi:"🎸 Hobi, Musik & Perayaan",budaya:"🕌 Budaya & Religi",lingkungan:"♻️ Lingkungan",abstrak:"🔷 Abstrak & Geometri",semua:"✨ Campur Semua Kategori"};
+const catKeys=k=>k=="semua"?Object.keys(IC):CAT[k];
+Object.entries(CATN).forEach(([k,v])=>{const o=document.createElement("option");o.value=k;o.textContent=v;$("cat").appendChild(o)});
+Object.entries(IC).forEach(([k,v])=>{const l=document.createElement("label");l.className="chip";l.dataset.k=k;l.innerHTML=`<input type="checkbox" value="${k}" checked><span>${v[0]} ${v[1]}</span>`;ch.appendChild(l)});
+function setCat(k){$("cat").value=k;ch.querySelectorAll(".chip").forEach(l=>l.hidden=!catKeys(k).includes(l.dataset.k))}
+$("cat").onchange=()=>{setCat($("cat").value);setObs(catKeys($("cat").value))};
+setCat("sekolah");
+function setObs(list){ch.querySelectorAll("input").forEach(i=>i.checked=list.includes(i.value))}
+$("all").onclick=()=>setObs(Object.keys(IC));$("none").onclick=()=>setObs([]);
+$("dice").onclick=()=>$("seed").value=1+Math.floor(Math.random()*99);
+
+const PRE={
+"Tahun Ajaran Baru":{bg:"waves",pal:3,ob:["buku","pensil","penggaris","tas","apel","jam"],mode:"fall",cnt:18,siz:11,spd:1,rot:"sway",ttl:"Selamat Datang",sub:"Tahun Ajaran Baru",fnt:"round",tan:"wave",tps:"mid",tcl:"#ffffff",tpn:"none"},
+"Hari Guru":{bg:"papan",pal:0,ob:["apel","buku","pensil","bintang","bel","aplus"],mode:"float",cnt:14,siz:12,spd:1,rot:"sway",ttl:"Selamat Hari Guru",sub:"Terima kasih, Guru Hebat",fnt:"hand",tan:"float",tps:"mid",tcl:"#ffffff",tpn:"none"},
+"Wisuda":{bg:"gradasi",pal:8,ob:["topi","bintang","buku","aplus"],mode:"rise",cnt:16,siz:11,spd:1,rot:"sway",ttl:"Selamat Wisuda",sub:"Class of 2026",fnt:"serif",tan:"breathe",tps:"mid",tcl:"#ffffff",tpn:"none"},
+"Sains & STEM":{bg:"grid",pal:3,ob:["atom","globe","bulb","calc","pi"],mode:"orbit",cnt:15,siz:12,spd:1,rot:"none",ttl:"Sains & Teknologi",sub:"Belajar Tanpa Batas",fnt:"sans",tan:"none",tps:"mid",tcl:"#14246b",tpn:"white"},
+"Waktunya Belajar":{bg:"buku",pal:0,ob:["aplus","pensil","penggaris","jam","calc","bel"],mode:"bounce",cnt:10,siz:13,spd:2,rot:"none",ttl:"Waktunya Belajar",sub:"",fnt:"hand",tan:"wave",tps:"top",tcl:"#14246b",tpn:"none"},
+"Sekolah Kita":{bg:"gradasi",pal:2,ob:["gedung","tas","bintang","jam"],mode:"pulse",cnt:8,siz:16,spd:1,rot:"none",ttl:"Sekolah Kita",sub:"Bersama Meraih Prestasi",fnt:"round",tan:"breathe",tps:"bot",tcl:"#ffffff",tpn:"none"},
+"Pola Sekolah (tanpa teks)":{bg:"solid",pal:1,ob:Object.keys(IC),mode:"marquee",cnt:24,siz:9,spd:1,rot:"sway",ttl:"",sub:"",fnt:"sans",tan:"none",tps:"mid",tcl:"#ffffff",tpn:"none"}
+};
+const mk=(bg,pal,cat,ob,mode,cnt,siz,spd=1,rot="sway",ttl="",sub="")=>({bg,pal,cat,ob:ob||CAT[cat],mode,cnt,siz,spd,rot,ttl,sub,fnt:"round",tan:"wave",tps:"mid",tcl:"#ffffff",tpn:"none"});
+Object.assign(PRE,{
+"Hewan Lucu":mk("langit",1,"hewan",["kucing","anjing","kelinci","penguin","lebah","kupu"],"float",14,14),
+"Dunia Laut":mk("laut",3,"hewan",["ikan","paus"],"wave",16,13),
+"Taman & Bunga":mk("langit",1,"alam",["bunga","daun","pohon","matahari","awan"],"float",14,13),
+"Camping Malam":mk("malam",8,"semua",["tenda","bulan","pinus","bintang"],"float",10,14,1,"none"),
+"Kuliner":mk("solid",6,"makanan",null,"fall",18,12),
+"Minuman Segar":mk("gradasi",1,"minuman",null,"rise",14,13),
+"Kota & Transportasi":mk("kota",0,"transport",null,"marquee",10,14,1,"none"),
+"Bangunan & Arsitektur":mk("langit",1,"bangunan",null,"float",10,16,1,"none"),
+"Teknologi":mk("garis",4,"teknologi",null,"orbit",12,13,1,"none"),
+"Bisnis & Keuangan":mk("gradasi",3,"bisnis",null,"bounce",10,14,2,"none"),
+"Olahraga":mk("sunburst",0,"olahraga",null,"bounce",9,15,1,"none"),
+"Liburan & Wisata":mk("langit",1,"travel",null,"float",12,14),
+"Sains & Kesehatan":mk("hexagon",3,"sains",null,"float",12,14),
+"Hobi & Musik":mk("gradasi",4,"hobi",null,"wave",12,13),
+"Ulang Tahun":mk("gradasi",1,"hobi",["hadiah","balon"],"rise",16,13,1,"sway","Selamat Ulang Tahun"),
+"Budaya & Religi":mk("malam",8,"budaya",null,"float",10,14),
+"Lingkungan Hijau":mk("langit",5,"lingkungan",null,"float",12,14),
+"Abstrak Warna-warni":mk("blobs",4,"abstrak",null,"float",18,10),
+"Abstrak Geometri":mk("hexagon",3,"abstrak",null,"spiral",30,8,1,"spin"),
+"Abstrak Konfeti":mk("gradasi",0,"abstrak",null,"fall",40,6,1,"spin"),
+"Latar Neon (tanpa objek)":mk("garis",4,"abstrak",[],"float",3,10),
+"Latar Aurora (tanpa objek)":mk("aurora",3,"abstrak",[],"float",3,10),
+"Latar Lingkaran (tanpa objek)":mk("rings",2,"abstrak",[],"float",3,10),
+"Latar Gelombang (tanpa objek)":mk("waves",3,"abstrak",[],"float",3,10),
+"Latar Blob Cair (tanpa objek)":mk("blobs",4,"abstrak",[],"float",3,10),
+"Latar Titik Bergelombang":mk("dots",3,"abstrak",[],"float",3,10)
+});
+Object.keys(PRE).forEach(k=>{const o=document.createElement("option");o.textContent=k;$("pre").appendChild(o)});
+function apply(name){const p=PRE[name];setPal(p.pal);setCat(p.cat||"sekolah");setObs(p.ob);["bg","mode","cnt","siz","spd","rot","ttl","sub","fnt","tan","tps","tcl","tpn"].forEach(k=>$(k).value=p[k])}
+$("pre").onchange=()=>apply($("pre").value);apply("Tahun Ajaran Baru");
+
+function dims(long){const[a,b]=$("rat").value.split(":").map(Number),r=a/b;let W,H;if(r>=1){W=long;H=long/r}else{H=long;W=long*r}return[Math.round(W/2)*2,Math.round(H/2)*2]}
+const pv=$("pv"),pc=pv.getContext("2d");
+function setPv(){[pv.width,pv.height]=dims(960)}$("rat").onchange=setPv;setPv();
+const t0=performance.now();
+(function loop(now){const d=+$("dur").value*1000;render(pc,pv.width,pv.height,((now-t0)%d)/d);requestAnimationFrame(loop)})(t0);
+
+function dl(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+$("png").onclick=()=>{const[W,H]=dims(+$("qlt").value),cv=document.createElement("canvas");cv.width=W;cv.height=H;const d=+$("dur").value*1000;render(cv.getContext("2d"),W,H,((performance.now()-t0)%d)/d);cv.toBlob(b=>dl(b,`motion-lifetime-${W}x${H}.png`),"image/png")};
+let cancelled=false;$("cancel").onclick=()=>cancelled=true;
+async function exportMP4(){
+ const[W,H]=dims(+$("qlt").value),fps=+$("fps").value,total=Math.round(+$("dur").value*fps),px=W*H,br=px>=8e6?35e6:px>=2e6?15e6:8e6;
+ const codecs=px>2.2e6?(fps>30?["avc1.640034","avc1.640033"]:["avc1.640033","avc1.640034"]):["avc1.64002A","avc1.640028","avc1.4d0028"];
+ let cfg=null;for(const codec of codecs){const x={codec,width:W,height:H,bitrate:br,framerate:fps};try{const s=await VideoEncoder.isConfigSupported(x);if(s.supported){cfg=x;break}}catch(e){}}
+ if(!cfg)return false;
+ const cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d"),bar=$("bar"),fill=bar.firstElementChild;
+ const ui=on=>{bar.style.display=on?"block":"none";$("cancel").style.display=on?"block":"none";$("vid").disabled=$("png").disabled=on};
+ ui(true);cancelled=false;
+ try{
+  const target=new Mp4Muxer.ArrayBufferTarget(),muxer=new Mp4Muxer.Muxer({target,video:{codec:"avc",width:W,height:H},fastStart:"in-memory"});
+  let err=null;const enc=new VideoEncoder({output:(k,m)=>muxer.addVideoChunk(k,m),error:e=>err=e});enc.configure(cfg);
+  for(let i=0;i<total;i++){
+   if(cancelled){enc.close();$("st").textContent="Dibatalkan.";ui(false);return true}
+   if(err)throw err;
+   render(c,W,H,i/total);
+   const f=new VideoFrame(cv,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps)});
+   enc.encode(f,{keyFrame:i%(fps*2)==0});f.close();
+   while(enc.encodeQueueSize>6)await new Promise(r=>setTimeout(r,4));
+   if(i%3==0){fill.style.width=(i/total*100)+"%";$("st").textContent=`Encode MP4 ${W}×${H}: frame ${i+1}/${total}`;await new Promise(r=>setTimeout(r,0))}
+  }
+  await enc.flush();if(err)throw err;muxer.finalize();
+  dl(new Blob([target.buffer],{type:"video/mp4"}),`motion-lifetime-${W}x${H}.mp4`);$("st").textContent="Selesai! File MP4 diunduh.";
+ }catch(e){$("st").textContent="Gagal ekspor MP4: "+e.message}
+ ui(false);return true}
+$("vid").onclick=async()=>{
+ const want=true,can=window.VideoEncoder&&window.VideoFrame&&window.Mp4Muxer;
+ if(want&&can){if(await exportMP4())return;$("st").textContent="Encoder H.264 tidak tersedia, beralih ke WebM…"}
+ else if(want)$("st").textContent="MP4 tidak didukung browser ini, beralih ke WebM…";
+ exportWebM()};
+function exportWebM(){
+ if(!window.MediaRecorder){$("st").textContent="Browser tidak mendukung MediaRecorder. Gunakan Chrome/Edge.";return}
+ const[W,H]=dims(+$("qlt").value),fps=+$("fps").value,dur=+$("dur").value*1000,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
+ const mime=["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"].find(m=>MediaRecorder.isTypeSupported(m)),px=W*H,bps=px>=8e6?45e6:px>=2e6?18e6:8e6;
+ let rec;try{rec=new MediaRecorder(cv.captureStream(fps),{mimeType:mime,videoBitsPerSecond:bps})}catch(e){$("st").textContent="Gagal memulai perekam: "+e.message;return}
+ const chunks=[];rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+ const bar=$("bar"),fill=bar.firstElementChild;bar.style.display="block";$("vid").disabled=$("png").disabled=true;$("st").textContent=`Merender ${W}×${H}…`;
+ rec.onstop=()=>{dl(new Blob(chunks,{type:"video/webm"}),`motion-lifetime-${W}x${H}.webm`);bar.style.display="none";$("vid").disabled=$("png").disabled=false;$("st").textContent="Selesai! File diunduh."};
+ rec.start();const s=performance.now();
+ (function f(now){const e=now-s;if(e>=dur){render(c,W,H,0);setTimeout(()=>rec.stop(),150);return}render(c,W,H,e/dur);fill.style.width=(e/dur*100)+"%";requestAnimationFrame(f)})(s);
+};
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x==b));
+ document.querySelectorAll(".sec").forEach(s=>s.classList.toggle("on",s.id==b.dataset.t))});
+
+$("logo").innerHTML=[..."Motion Lifetime"].map((ch,i)=>ch==" "?'<span class="l sp" style="--i:'+i+'">&nbsp;</span>':'<span class="l" style="--i:'+i+'">'+ch+'</span>').join("");
+document.querySelectorAll("#seg button").forEach(b=>b.onclick=()=>{
+ $("rat").value=b.dataset.r;setPv();
+ document.querySelectorAll("#seg button").forEach(x=>x.classList.toggle("on",x==b))});
+</script>
+</body>
+</html>
